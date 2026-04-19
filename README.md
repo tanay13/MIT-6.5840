@@ -8,7 +8,7 @@ The goal of this repo is purely for:
 
 * Practicing distributed systems concepts
 * Implementing course labs and assignments
-* Building a deeper understanding of systems like MapReduce, Raft, etc.
+* Building a deeper understanding of systems
 
 ## Note
 
