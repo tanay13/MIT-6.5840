@@ -1,7 +1,11 @@
 package lock
 
 import (
-	"6.5840/kvtest1"
+	"sync"
+	"time"
+
+	"6.5840/kvsrv1/rpc"
+	kvtest "6.5840/kvtest1"
 )
 
 type Lock struct {
@@ -11,6 +15,9 @@ type Lock struct {
 	// MakeLock().
 	ck kvtest.IKVClerk
 	// You may add code here
+	uid     string
+	lockKey string
+	lck     sync.Mutex
 }
 
 // The tester calls MakeLock() and passes in a k/v clerk; your code can
@@ -21,13 +28,43 @@ type Lock struct {
 func MakeLock(ck kvtest.IKVClerk, l string) *Lock {
 	lk := &Lock{ck: ck}
 	// You may add code here
+	lk.uid = kvtest.RandValue(8)
+	lk.lockKey = l
 	return lk
 }
 
 func (lk *Lock) Acquire() {
 	// Your code here
+	for {
+		val, ver, err := lk.ck.Get(lk.lockKey)
+		if err == rpc.ErrNoKey || val == "FREE" || val == lk.uid {
+			errr := lk.ck.Put(lk.lockKey, lk.uid, ver)
+			if errr == rpc.ErrVersion || errr == rpc.ErrMaybe {
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
 }
 
 func (lk *Lock) Release() {
-	// Your code here
+	for {
+		val, ver, err := lk.ck.Get(lk.lockKey)
+
+		if err == rpc.ErrNoKey {
+			return
+		}
+		if val != lk.uid {
+			return
+		}
+
+		errr := lk.ck.Put(lk.lockKey, "FREE", ver)
+
+		if errr == rpc.OK || errr == rpc.ErrMaybe {
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
 }
